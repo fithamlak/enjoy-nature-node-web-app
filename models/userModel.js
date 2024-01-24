@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 
 
-const userSchema = new userSchema.schema({
+const userSchema = new mongoose.Schema({
     name: {
         type: String,
         required: [true, "please tell us your name"]
@@ -16,11 +16,11 @@ const userSchema = new userSchema.schema({
     },
     photo: String,
     password: {
-        String,
+        type: String,
         required: [true, 'plrovide a password'],
         minLength:8
     },
-    passswordconfirma: {
+    passswordConfirm: {
         type:String,
         required: [true, 'please confirm your password']
     }
@@ -29,4 +29,4 @@ const userSchema = new userSchema.schema({
 
 const User = mongoose.model('User', userSchema);
 
-model.exports = User;
+module.exports = User;
