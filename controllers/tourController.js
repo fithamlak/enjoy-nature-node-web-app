@@ -90,7 +90,7 @@ exports.deleteTour = catchAsync(async (req, res, next) => {
       status: 'success',
       data: null
     });
- });
+});
 
 exports.getTourStats = catchAsync(async (req, res, next) => {
     const stats = await Tour.aggregate([
@@ -122,7 +122,7 @@ exports.getTourStats = catchAsync(async (req, res, next) => {
         stats
       }
     });
-  });
+});
 
 
 exports.getMonthlyPlan = catchAsync(async (req, res, next) => {
@@ -168,5 +168,5 @@ exports.getMonthlyPlan = catchAsync(async (req, res, next) => {
       data: {
         plan
       }
-    });
-   });
+  });
+});
