@@ -11,18 +11,21 @@ const signToken = id => {
     expiresIn: process.env.JWT_EXPIRES_IN
 })
 }
-exports.signup = catchAsync(async(req, res, next) => {
-  const newUser = await User.create(req.body);
 
-
-  const token = signToken(newUser._id)
-  res.status(201).json({
+const createSendToken = (user, statusCode, res) =>{
+  const token = signToken(user._id)
+  res.status(statusCode).json({
     status: 'success',
     token,
     data: {
-        User: newUser
+        User
     }
   });
+}
+exports.signup = catchAsync(async(req, res, next) => {
+  const newUser = await User.create(req.body);
+  createSendToken(newUser, 201, res);
+
 });
 
 exports.login = catchAsync(async (req, res, next) => {
@@ -43,11 +46,7 @@ exports.login = catchAsync(async (req, res, next) => {
 
 
   // 3) if everything okaysend token to client
-  const token = signToken(user._id)
-  res.status(200).json({
-    status: 'success',
-    token: token
-  })
+  createSendToken(user, 201, res);
 });
 
 exports.protect = catchAsync( async(req, res, next) => {
@@ -149,10 +148,28 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   user.passwordResetToken = undefined;
   user.passwordResetExpires = undefined;
   user.save();
+  
+  createSendToken(user, 200, res);
+})
 
-  const token = signToken(user._id)
-  res.status(200).json({
-    status: 'success',
-    token: token
-  })
+exports.updatePassword = catchAsync(async(req, res, next) => {
+  // 1) Get user from collection
+
+  const user = await User.findById(req.user.id).select('+password');
+
+  // 2/ Check if posted (current) password is correct
+
+  if(!(await user.correctPassword(req.body.currentPassword, user.password))) {
+    return next(new AppError('your current password is wrong.', 401))
+  }
+
+  // 3) If so, update password
+
+  user.password = req.body.password;
+  user.passswordConfirm = req.body.passswordConfirm;
+  await user.save();
+
+  // 4) logged in user, send JWT
+  createSendToken(user, 200, res);
+  
 })
