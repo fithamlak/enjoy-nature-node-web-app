@@ -1,5 +1,17 @@
 const User = require('./../models/userModel');
 const catchAsync = require('./../utils/catchAsync')
+const AppError = require('./../utils/appError')
+
+const filterObj = (obj, ...allowFields) => {
+  const newObj = {};
+  Object.keys(obj).forEach(el => {
+    if(allowFields.includes(el)) {
+     newObj[el] = obj[el];
+    }
+  });
+  return newObj;
+}
+
 exports.getAllUsers = catchAsync(async (req, res) => {
   const users = await User.find();
 
@@ -12,8 +24,34 @@ exports.getAllUsers = catchAsync(async (req, res) => {
     }
   });
 });
+
+
+
+exports.updateMe = catchAsync(async (req, res, next) => {
+  console.log('am touched')
+  // 1) create error if user posts password data
+  if(req.body.password || req.body.passwordConfirm) {
+    return next(new AppError('This route is not password updates. please use /updateMyPassword', 400));
+  }
+  // 2) filtered out unwanted fields that are not allowed to be updated
+  const filteredBody = filterObj(req.body, 'name', 'email')
+
+  // 3) update document
+  const updatedUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {new: true, runValidators: true})
+  console.log('am touched')
+  console.log(updatedUser);
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      user: updatedUser
+    }
+  });
+
+
+});
   
-  exports.getUser = (req, res) => {
+exports.getUser = (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'This route is not yet defined!'
