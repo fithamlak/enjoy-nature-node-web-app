@@ -115,14 +115,20 @@ const tourSchema = new mongoose.Schema(
 );
 
 tourSchema.virtual('durationWeeks').get(function() {
-    return this.duration / 7;
-  });
-  
+  return this.duration / 7;
+});
+
+
+tourSchema.virtual('reviews', {
+  ref: 'Review',
+  foreignField: 'tour',
+  localField: '_id'
+}); 
   // DOCUMENT MIDDLEWARE: runs before .save() and .create()
-  tourSchema.pre('save', function(next) {
-    this.slug = slugify(this.name, { lower: true });
+tourSchema.pre('save', function(next) {
+  this.slug = slugify(this.name, { lower: true });
     next();
-  });
+});
   
   // tourSchema.pre('save', function(next) {
   //   console.log('Will save document...');
@@ -143,27 +149,27 @@ tourSchema.virtual('durationWeeks').get(function() {
     next();
   });
 
-  tourSchema.pre(/^find/, function(next) {
-    this.populate({
-      path: 'guides',
-      select: '-__v -passwordChangedAt'
-    });
+tourSchema.pre(/^find/, function(next) {
+  this.populate({
+    path: 'guides',
+    select: '-__v -passwordChangedAt'
+  });
 
-    next();
-  });
+  next();
+});
   
-  tourSchema.post(/^find/, function(docs, next) {
-    console.log(`Query took ${Date.now() - this.start} milliseconds!`);
+tourSchema.post(/^find/, function(docs, next) {
+  console.log(`Query took ${Date.now() - this.start} milliseconds!`);
     next();
-  });
+});
   
-  // AGGREGATION MIDDLEWARE
-  tourSchema.pre('aggregate', function(next) {
-    this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
+// AGGREGATION MIDDLEWARE
+tourSchema.pre('aggregate', function(next) {
+  this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
   
-    console.log(this.pipeline());
-    next();
-  });
+  console.log(this.pipeline());
+  next();
+});
 
 const Tour = mongoose.model('Tour', tourSchema);
 
