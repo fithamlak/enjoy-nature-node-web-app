@@ -1,4 +1,4 @@
-const path = require('path')
+const path = require('path');
 const express = require('express');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
@@ -6,88 +6,82 @@ const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
+const cookieParser = require('cookie-parser');
 
-const AppError = require('./utils/appError')
+const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 const reviewRouter = require('./routes/reviewRoutes');
-const { base } = require('./models/tourModel');
+const viewRouter = require('./routes/viewRoutes');
 
 const app = express();
 
-app.set('view engine', 'pug')
-app.set('views', path.join(__dirname, 'views'))
+app.set('view engine', 'pug');
+app.set('views', path.join(__dirname, 'views'));
 
-// Set http security headers
-// 1) Global MIDDLEWARES
-// middleware for static path
+// 1) GLOBAL MIDDLEWARES
+// Serving static files
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Set security HTTP headers
+app.use(helmet());
+
+// Development logging
 if (process.env.NODE_ENV === 'development') {
-    app.use(morgan('dev'));
+  app.use(morgan('dev'));
 }
 
-const limter = rateLimit({
+// Limit requests from same API
+const limiter = rateLimit({
   max: 100,
   windowMs: 60 * 60 * 1000,
-  message: 'Too many request fro this IP. please try later after an hour'
-})
+  message: 'Too many requests from this IP, please try again in an hour!'
+});
+app.use('/api', limiter);
 
-// rate limiter to protect from brute force and DDoS attack
-app.use('/api', limter);
+// Body parser, reading data from body into req.body
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(cookieParser());
 
-// parse req. body and also limit size of paylod(body data to be parsed)
-app.use(express.json({limit: '10kb'}));
-
-// mongo sanitize against NoSQl query injection
+// Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
 
-// Data sanitization against xss
+// Data sanitization against XSS
 app.use(xss());
 
-// prevent parameter pollution
-app.use(hpp({
-  whitelist: [
-    'duration',
-    'ratingsQuantity',
-    'ratingsAverage',
-    'maxGroupSize',
-    'difficulty',
-    'price'
+// Prevent parameter pollution
+app.use(
+  hpp({
+    whitelist: [
+      'duration',
+      'ratingsQuantity',
+      'ratingsAverage',
+      'maxGroupSize',
+      'difficulty',
+      'price'
+    ]
+  })
+);
 
-  ]
-}));
-
-
-// middleware for testing
-app.use((req, res, next) => {
-  console.log('Hello from the middleware 👋');
-  next();
-});
-
-// middleware for testing
+// Test middleware
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
+  console.log(req.cookies);
   next();
 });
 
 // 3) ROUTES
-app.get('/', (req, res) => {
-  res.status(200).render('base', {
-  tour: 'the forrest hiker',
-  user: 'Justice'
-  })
-  
-})
-
+app.use('/', viewRouter);
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/reviews', reviewRouter);
 
-app.use('*', (req, res, next) => {
+app.all('*', (req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
 
-next(new AppError(`can'nt find ${req.originalUrl} on this server!`));
-})
+app.use(globalErrorHandler);
 
-app.use(globalErrorHandler)
 module.exports = app;
