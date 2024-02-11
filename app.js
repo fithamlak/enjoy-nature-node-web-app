@@ -1,3 +1,4 @@
+const path = require('path')
 const express = require('express');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
@@ -11,11 +12,17 @@ const globalErrorHandler = require('./controllers/errorController');
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 const reviewRouter = require('./routes/reviewRoutes');
+const { base } = require('./models/tourModel');
 
 const app = express();
 
+app.set('view engine', 'pug')
+app.set('views', path.join(__dirname, 'views'))
+
 // Set http security headers
 // 1) Global MIDDLEWARES
+// middleware for static path
+app.use(express.static(path.join(__dirname, 'public')));
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
@@ -50,8 +57,7 @@ app.use(hpp({
 
   ]
 }));
-// middleware for static path
-app.use(express.static(`${__dirname}/public`));
+
 
 // middleware for testing
 app.use((req, res, next) => {
@@ -66,6 +72,10 @@ app.use((req, res, next) => {
 });
 
 // 3) ROUTES
+app.get('/', (req, res) => {
+  res.status(200).render('base')
+})
+
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/reviews', reviewRouter);
